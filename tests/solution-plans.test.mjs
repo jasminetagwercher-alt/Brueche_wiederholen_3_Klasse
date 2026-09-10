@@ -24,8 +24,9 @@ assert.deepEqual(multiply.steps[0].expected.map(f=>f.toJSON()),[{numerator:1,den
 const task={solutionPlan:divide};
 assert.equal(chooseSupportMode({phase:'diagnostic',skillState:{confidence:'unsicher'},task}),'free');
 assert.equal(chooseSupportMode({phase:'training',skillState:{confidence:'unsicher'},task}),'guided');
-assert.equal(chooseSupportMode({phase:'training',skillState:{confidence:'im Aufbau'},task}),'partial');
-assert.equal(chooseSupportMode({phase:'training',skillState:{confidence:'sicher'},task}),'free');
+assert.equal(chooseSupportMode({phase:'training',skillState:{confidence:'im Aufbau',errors:0,correctNoHelp:1},task}),'partial');
+assert.equal(chooseSupportMode({phase:'training',skillState:{confidence:'im Aufbau',errors:1,correctNoHelp:0},task}),'guided','Fehler in der Diagnose soll trotz Status im Aufbau zu Führung führen');
+assert.equal(chooseSupportMode({phase:'training',skillState:{confidence:'sicher',errors:0,correctNoHelp:3},task}),'free');
 assert.equal(chooseSupportMode({phase:'final',skillState:{confidence:'unsicher'},task}),'free');
 
 console.log('Rechenweg- und Scaffolding-Tests erfolgreich.');
