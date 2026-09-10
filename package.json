@@ -2,5 +2,5 @@
   "name":"bruch-check",
   "private":true,
   "type":"module",
-  "scripts":{"test":"node tests/fraction.test.mjs && node tests/generators.test.mjs && node tests/solution-plans.test.mjs"}
+  "scripts":{"test":"node --check js/app.js && node --check js/ui/calculation-line.js && node tests/fraction.test.mjs && node tests/generators.test.mjs && node tests/solution-plans.test.mjs"}
 }
