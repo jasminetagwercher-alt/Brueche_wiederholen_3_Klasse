@@ -1,0 +1,6 @@
+{
+  "name":"bruch-check",
+  "private":true,
+  "type":"module",
+  "scripts":{"test":"node tests/fraction.test.mjs"}
+}
