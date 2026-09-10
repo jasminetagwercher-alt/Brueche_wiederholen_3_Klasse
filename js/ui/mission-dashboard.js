@@ -1,10 +1,10 @@
 import {MISSIONS,missionDashboardSummary,missionProgress,missionStatus} from '../learning/missions.js';
 
-function escapeHtml(value){return String(value??'').replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]))}
+function escapeHtml(value){return String(value??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
 
 export function journeyNav(stage){
   const order=['diagnostic','missions','final'];
-  const current=Math.max(0,order.indexOf(stage));
+  const current=stage==='results'?order.length:Math.max(0,order.indexOf(stage));
   const labels={diagnostic:'Schnellcheck',missions:'Missionen',final:'Final Check'};
   return `<nav class="journey-nav" aria-label="Bruch-Check Lernweg">${order.map((id,index)=>{
     const state=index<current?'done':index===current?'current':'upcoming';
@@ -13,7 +13,8 @@ export function journeyNav(stage){
 }
 
 export function progressDots(current,total){
-  return `<div class="progress-dots" aria-label="Fortschritt: Aufgabe ${Math.min(current+1,total)}"><span class="sr-only">Aufgabe ${Math.min(current+1,total)} von ${total}</span>${Array.from({length:total},(_,index)=>`<span class="progress-dot ${index<current?'done':index===current?'current':''}" aria-hidden="true"></span>`).join('')}</div>`;
+  const spoken=Math.min(current+1,total);
+  return `<div class="progress-dots" aria-label="Fortschritt"><span class="sr-only">Aufgabe ${spoken} von ${total}</span>${Array.from({length:total},(_,index)=>`<span class="progress-dot ${index<current?'done':index===current?'current':''}" aria-hidden="true"></span>`).join('')}</div>`;
 }
 
 function cardStateText(status,progress){
@@ -32,7 +33,7 @@ function cardButtonText(status){
   return'Ausprobieren';
 }
 
-export function missionDashboardTemplate(session){
+export function missionDashboardTemplate(session,{justFinishedDiagnostic=false}={}){
   const summary=missionDashboardSummary(session);
   const cards=MISSIONS.map(mission=>{
     const status=missionStatus(session,mission),progress=missionProgress(session,mission.id);
@@ -46,8 +47,10 @@ export function missionDashboardTemplate(session){
   }).join('');
   const open=summary.recommended;
   const finalText=open>0?`${open} ${open===1?'empfohlene Mission ist':'empfohlene Missionen sind'} noch offen. Du kannst den Final Check trotzdem starten.`:'Alle empfohlenen Missionen sind erledigt. Du bist bereit für den Final Check.';
+  const banner=justFinishedDiagnostic?`<div class="diagnostic-finish-banner"><span class="diagnostic-finish-icon">✓</span><div><strong>Schnellcheck geschafft</strong><p>Ab jetzt musst du nicht mehr alles bearbeiten. Die empfohlenen Missionen richten sich nach deinem Schnellcheck.</p></div></div>`:'';
   return `<section class="card dashboard-card">
     ${journeyNav('missions')}
+    ${banner}
     <div class="dashboard-hero">
       <div><p class="eyebrow">Dein Bruch-Check</p><h1>Wähle deine nächste Mission</h1><p class="lead">Du musst nicht alles bearbeiten. Sichere Bereiche kannst du überspringen. Trainiere dort, wo es dir etwas bringt.</p></div>
       <div class="dashboard-score"><strong>${summary.secure}</strong><span>von ${summary.total}<br>sicher oder geschafft</span></div>
