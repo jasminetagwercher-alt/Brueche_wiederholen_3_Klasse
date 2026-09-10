@@ -4,6 +4,7 @@ export const AT_TERMS=Object.freeze({
   fractionBar:'Bruchstrich',
   properFraction:'echter Bruch',
   improperFraction:'unechter Bruch',
+  apparentWholeFraction:'uneigentlicher Bruch',
   mixedNumber:'gemischte Zahl',
   equivalentFractions:'gleichwertige Brüche',
   commonDenominator:'gemeinsamer Nenner',
