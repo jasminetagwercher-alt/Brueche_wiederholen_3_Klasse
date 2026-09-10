@@ -3,7 +3,7 @@ export function chooseSupportMode({phase,skillState,task}){
   if(phase==='diagnostic'||phase==='final')return'free';
   const confidence=skillState?.confidence||'noch nicht geprüft';
   const clearFailure=(skillState?.errors||0)>0&&(skillState?.correctNoHelp||0)===0;
-  if(phase==='training'){
+  if(phase==='mission'||phase==='training'){
     if(clearFailure||confidence==='unsicher'||confidence==='noch nicht geprüft')return'guided';
     if(confidence==='im Aufbau')return'partial';
     return'free';
