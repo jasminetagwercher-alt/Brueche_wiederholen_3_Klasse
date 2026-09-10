@@ -24,7 +24,7 @@ export function generateBasic(skill,difficulty=1){
     if(kind==='echt'){const den=randomInt(3,10);f=F(randomInt(1,den-1),den)}
     else if(kind==='uneigentlich'){const den=randomInt(2,8);f=F(den*randomInt(1,3),den)}
     else{const den=randomInt(3,9);let num=randomInt(den+1,den*2+2);while(num%den===0)num++;f=F(num,den)}
-    return{...base,type:'choice',answerType:'choice',promptTex:`\\frac{${f.numerator}}{${f.denominator}}`,promptText:'Welche Art von Bruch ist das?',options:[{value:'echt',label:'echter Bruch'},{value:'unecht',label:'unechter Bruch'},{value:'uneigentlich',label:'uneigentlicher Bruch'}],correctAnswer:kind,hints:['Vergleiche Zähler und Nenner.','Ein uneigentlicher Bruch ergibt eine ganze Zahl.']};
+    return{...base,type:'choice',answerType:'choice',promptTex:`\\frac{${f.numerator}}{${f.denominator}}`,promptText:'Welche genauere Bruchart passt am besten?',options:[{value:'echt',label:'echter Bruch'},{value:'unecht',label:'unechter Bruch'},{value:'uneigentlich',label:'uneigentlicher Bruch'}],correctAnswer:kind,hints:['Vergleiche Zähler und Nenner.','Ein uneigentlicher Bruch ist auch unecht, ergibt aber genau eine ganze Zahl und ist deshalb die genauere Bezeichnung.']};
   }
 
   if(skill==='mixed_numbers'){
