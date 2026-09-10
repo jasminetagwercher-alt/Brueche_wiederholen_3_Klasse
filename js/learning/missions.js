@@ -1,11 +1,11 @@
 export const MISSIONS=Object.freeze([
-  {id:'bruchcode',code:'01',title:'Brüche verstehen',subtitle:'Zähler, Nenner und Brucharten',skills:['fraction_meaning','proper_improper'],diagnosticSkills:['fraction_meaning','proper_improper'],length:3},
-  {id:'formenwechsel',code:'02',title:'Gemischte Zahlen',subtitle:'Gemischte Zahl und unechter Bruch',skills:['mixed_numbers'],diagnosticSkills:['mixed_numbers'],length:3},
-  {id:'umbau',code:'03',title:'Kürzen & Erweitern',subtitle:'Brüche geschickt umformen',skills:['simplify','expand','equivalence'],diagnosticSkills:['simplify','expand'],length:4},
-  {id:'position',code:'04',title:'Vergleichen & Zahlenstrahl',subtitle:'Brüche einordnen und anordnen',skills:['compare','order','number_line'],diagnosticSkills:['compare'],length:4},
-  {id:'uebersetzen',code:'05',title:'Bruch & Dezimalzahl',subtitle:'Zwischen Darstellungen wechseln',skills:['fraction_to_decimal','decimal_to_fraction'],diagnosticSkills:['fraction_to_decimal'],length:3},
-  {id:'anteil',code:'06',title:'Bruchteil & Ganzes',subtitle:'Anteile berechnen und zurückrechnen',skills:['fraction_of_quantity','whole_from_part'],diagnosticSkills:['fraction_of_quantity'],length:4},
-  {id:'operatoren',code:'07',title:'Rechnen mit Brüchen',subtitle:'Addieren, Subtrahieren, Multiplizieren, Dividieren',skills:['add','subtract','multiply','divide'],diagnosticSkills:['add','divide'],length:5}
+  {id:'bruchcode',code:'01',callSign:'Bruchcode',title:'Brüche verstehen',subtitle:'Zähler, Nenner und Brucharten',skills:['fraction_meaning','proper_improper'],diagnosticSkills:['fraction_meaning','proper_improper'],length:3},
+  {id:'formenwechsel',code:'02',callSign:'Formenwechsel',title:'Gemischte Zahlen',subtitle:'Gemischte Zahl und unechter Bruch',skills:['mixed_numbers'],diagnosticSkills:['mixed_numbers'],length:3},
+  {id:'umbau',code:'03',callSign:'Umbau',title:'Kürzen & Erweitern',subtitle:'Brüche geschickt umformen',skills:['simplify','expand','equivalence'],diagnosticSkills:['simplify','expand'],length:4},
+  {id:'position',code:'04',callSign:'Position',title:'Vergleichen & Zahlenstrahl',subtitle:'Brüche einordnen und anordnen',skills:['compare','order','number_line'],diagnosticSkills:['compare'],length:4},
+  {id:'uebersetzen',code:'05',callSign:'Übersetzen',title:'Bruch & Dezimalzahl',subtitle:'Zwischen Darstellungen wechseln',skills:['fraction_to_decimal','decimal_to_fraction'],diagnosticSkills:['fraction_to_decimal'],length:3},
+  {id:'anteil',code:'06',callSign:'Anteil',title:'Bruchteil & Ganzes',subtitle:'Anteile berechnen und zurückrechnen',skills:['fraction_of_quantity','whole_from_part'],diagnosticSkills:['fraction_of_quantity'],length:4},
+  {id:'operatoren',code:'07',callSign:'Operatoren',title:'Rechnen mit Brüchen',subtitle:'Addieren, Subtrahieren, Multiplizieren, Dividieren',skills:['add','subtract','multiply','divide'],diagnosticSkills:['add','divide'],length:5}
 ]);
 
 export const DIAGNOSTIC_SKILLS=Object.freeze([
