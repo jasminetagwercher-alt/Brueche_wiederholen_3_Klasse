@@ -4,28 +4,32 @@ Interaktive, diagnostische und adaptive Lernplattform für die 3. Klasse Mittels
 
 ## Funktionen
 
-- vier Phasen: Bruch-Check, individuelles Training, Bruch-Mix, Abschlusscheck
+- vier klar sichtbare Phasen: Bruch-Check, individuelles Training, Bruch-Mix, Abschlusscheck
+- Lernstrecken-Übersicht und Abschnittsnavigation
+- kurze Konzentrationsstopps etwa alle fünf Aufgaben sowie ein deutlicher Übergang nach jeder Phase
 - exakte zentrale Bruchrechnung über `Fraction`
 - echte/unechte Brüche und gemischte Zahlen
 - Kürzen, Erweitern und Äquivalenz
 - Vergleichen und Ordnen
-- interaktiver Zahlenstrahl
+- interaktiver Zahlenstrahl mit Raster-Snapping und Tastaturbedienung
 - Bruch ↔ Dezimalzahl
 - Bruchteil einer Zahl und Ganzes aus Bruchteil
 - Addition, Subtraktion, Multiplikation und Division
 - gestufte Hilfen
 - einfache Fehlkonzept-Erkennung
 - Kompetenzmodell und regelbasierte Adaptivität
+- dynamische Aufgabengeneratoren mit Schwierigkeitsstufen und Sperre gegen zu frühe Wiederholungen
 - lokaler Sitzungsstand per `localStorage`
 - vorbereitete Remote-Speicherschnittstelle
 - JSON-Ergebnisexport
 - KaTeX-Darstellung
+- automatische Core- und Generator-Smoke-Tests über GitHub Actions
 
 ## Lokale Nutzung
 
 Da ES Modules verwendet werden, sollte die Anwendung über einen kleinen lokalen Webserver geöffnet werden und nicht direkt per `file://`.
 
-Beispiele:
+Beispiel:
 
 ```bash
 python -m http.server 8000
@@ -33,7 +37,7 @@ python -m http.server 8000
 
 Danach `http://localhost:8000` öffnen.
 
-Die Mathematiktests benötigen nur Node.js:
+Die Tests benötigen nur Node.js:
 
 ```bash
 npm test
@@ -59,14 +63,16 @@ Die Anwendung benötigt keinen Build-Schritt. `index.html` liegt im Repository-R
 ├─ css/
 │  └─ main.css
 ├─ js/
-│  ├─ app.js                  # nur Ablaufkoordination
+│  ├─ app.js                  # Ablaufkoordination
 │  ├─ config.js               # zentrale Konfiguration
 │  ├─ core/
 │  │  ├─ fraction.js          # exakte Bruchrechnung
 │  │  └─ answer-validator.js  # semantische Antwortprüfung
 │  ├─ generators/
-│  │  ├─ registry.js
+│  │  ├─ registry.js          # verbindet Skills mit Generatoren
+│  │  ├─ generator-utils.js   # Zufall, Signaturen, Wiederholungssperre
 │  │  ├─ basic.js
+│  │  ├─ conversions.js
 │  │  ├─ operations.js
 │  │  └─ compare-order.js
 │  ├─ learning/
@@ -81,16 +87,31 @@ Die Anwendung benötigt keinen Build-Schritt. `index.html` liegt im Repository-R
 │  └─ ui/
 │     ├─ inputs.js
 │     ├─ math-renderer.js
+│     ├─ navigation.js
 │     └─ number-line.js
-└─ tests/
-   └─ fraction.test.mjs
+├─ tests/
+│  ├─ fraction.test.mjs
+│  └─ generators.test.mjs
+└─ .github/workflows/tests.yml
 ```
+
+## Lernfluss und Pausen
+
+Die Anwendung soll nicht als lange ununterbrochene Aufgabenserie wirken. Jede Phase besitzt eine sichtbare Position in der Lernstrecke. Innerhalb längerer Phasen wird nach einer konfigurierbaren Anzahl von Aufgaben ein kurzer Stopp angezeigt. Der Schüler entscheidet selbst, wann er fortsetzt. Nach jeder Phase folgt eine eigene Abschluss- und Übergangsseite.
+
+Die Anzahl der Aufgaben zwischen zwei Stopps wird zentral in `js/config.js` über `breakEvery` festgelegt. Die Übersicht kann während der Bearbeitung geöffnet werden; abgeschlossene Phasen und die aktuelle Position bleiben sichtbar.
 
 ## Mathematische Architektur
 
 Alle Brüche werden zentral als `Fraction` mit ganzzahligem `numerator` und `denominator` behandelt. Die Kernoperationen normalisieren Vorzeichen, verbieten Nenner 0 und reduzieren Ergebnisse exakt. Vergleich und Äquivalenz basieren auf Kreuzmultiplikation statt auf gerundeten Dezimalwerten. Dezimaleingaben werden zunächst als rationale Zahl rekonstruiert.
 
 Generatoren dürfen mathematische Operationen nicht selbst nachimplementieren. Sie erzeugen nur Aufgabenparameter und verwenden die Core-Engine für Ergebnisse.
+
+## Aufgabengeneratoren und Wiederholungen
+
+Version 1 verwendet keine kleinen festen Listen als primäre Aufgabenquelle. Zahlenwerte werden innerhalb didaktisch begrenzter Bereiche dynamisch erzeugt. Die Schwierigkeit beeinflusst unter anderem Nennerbereiche, gemeinsamen Nenner und das Auftreten unechter Ergebnisse.
+
+Jede erzeugte Aufgabe erhält eine inhaltliche Signatur. `generateTask()` kann eine Liste zuletzt gezeigter Signaturen erhalten und erzeugt dann eine neue Variante. Die Länge dieses Gedächtnisses wird in `js/config.js` über `recentTaskMemory` gesteuert. Dadurch werden identische Zahlenkombinationen nicht unnötig kurz hintereinander wiederholt.
 
 ## Neuen Skill ergänzen
 
@@ -122,7 +143,7 @@ Ein Generator soll ein Task-Objekt mit mindestens folgenden Feldern liefern:
 }
 ```
 
-Optionale Metadaten wie `operands`, `requireReduced`, `meta` oder Komponenten-Konfigurationen können ergänzt werden. Die Antwortprüfung soll nicht im Generator dupliziert werden.
+Optionale Metadaten wie `operands`, `requireReduced`, `meta` oder Komponenten-Konfigurationen können ergänzt werden. Die Antwortprüfung soll nicht im Generator dupliziert werden. Neue dynamische Generatoren sollten über `generator-utils.js` eine Aufgabe-Signatur erhalten und in `generators.test.mjs` mindestens mit einem Smoke-Test abgedeckt werden.
 
 ## Neue Fehlkonzept-Regel ergänzen
 
@@ -146,12 +167,13 @@ Version 1 verwendet bewusst transparente Regeln:
 - unmittelbar wiederholte Skills werden abgewertet
 - zwei sichere Lösungen können die Schwierigkeit erhöhen
 - wiederholte Fehler können sie senken
+- zuletzt gezeigte konkrete Aufgabenvarianten werden zusätzlich über ihre Signatur vermieden
 
-Die Regeln liegen ausschließlich in `js/learning/adaptive-engine.js` und können später ersetzt werden.
+Die Skill-Auswahl liegt in `js/learning/adaptive-engine.js`; die Vermeidung konkreter Aufgabenwiederholungen liegt in der Generator-Schicht. Beide Mechanismen können unabhängig weiterentwickelt werden.
 
 ## Speicherung und späterer Google-Sheets-Anschluss
 
-`LocalStorageAdapter` speichert den aktuellen Sitzungsstand lokal im Browser. Die Anwendung kann nach einem Reload fortgesetzt werden.
+`LocalStorageAdapter` speichert den aktuellen Sitzungsstand lokal im Browser. Die Anwendung kann nach einem Reload fortgesetzt werden. Auch Lernphase, Aufgabensequenz, bereits angezeigte Aufgaben-Signaturen und absolvierte Pausen werden gespeichert.
 
 `RemoteStorageAdapter` ist bereits vorbereitet. Die URL wird ausschließlich in `js/config.js` über `remoteStorageUrl` konfiguriert. Solange sie leer ist, arbeitet Bruch-Check vollständig lokal.
 
@@ -168,18 +190,19 @@ Am Ende werden u. a. exportiert:
 - Fehlversuche
 - Hilfen
 - erkannte Fehlkonzepte
+- absolvierte Konzentrationsstopps
 - Bearbeitungsdauer
 
 Die Anwendung erzeugt bewusst keine automatische Schulnote.
 
 ## Erweiterung auf weitere Mathematikthemen
 
-Die aktuelle Trennung von Mathematik-Core, Generatoren, Skills, Adaptivität, Feedback/UI und Storage ist darauf ausgelegt, später Themen wie Prozentrechnung, rationale Zahlen, Terme oder Gleichungen hinzuzufügen. Dabei soll die Bruch-Engine als eigenständiges Modul bestehen bleiben und `app.js` weiterhin nur den Ablauf koordinieren.
+Die aktuelle Trennung von Mathematik-Core, Generatoren, Skills, Adaptivität, Feedback/UI, Navigation und Storage ist darauf ausgelegt, später Themen wie Prozentrechnung, rationale Zahlen, Terme oder Gleichungen hinzuzufügen. Dabei soll die Bruch-Engine als eigenständiges Modul bestehen bleiben und `app.js` weiterhin primär den Ablauf koordinieren.
 
 ## Bekannte Grenzen von Version 1
 
 - Die Adaptivität ist regelbasiert, nicht statistisch oder KI-basiert.
-- Der Zahlenstrahl verwendet in Version 1 Platzieren/Klicken; der vorbereitete Komponentenmodus unterstützt auch das Anzeigen markierter Werte, ist aber noch nicht in allen Phasen als eigener Generator ausgeschöpft.
+- Der Zahlenstrahl verwendet in Version 1 hauptsächlich das Platzieren; der Komponentenmodus für das Ablesen markierter Werte kann in weiteren Generatoren stärker genutzt werden.
 - Ordnung erfolgt barriereärmer über Links-/Rechts-Buttons statt ausschließlich über Drag-and-Drop.
 - Remote-Speicherung ist vorbereitet, aber ohne konfigurierte URL absichtlich deaktiviert.
 
