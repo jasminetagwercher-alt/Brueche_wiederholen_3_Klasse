@@ -3,7 +3,7 @@ const STRATEGIES={
     title:'Zähler und Nenner verstehen',
     rule:'Der Nenner zeigt, in wie viele gleich große Teile das Ganze geteilt wird. Der Zähler zeigt, wie viele dieser Teile gemeint sind.',
     steps:['Lies zuerst den Nenner: So viele gleich große Teile gibt es insgesamt.','Lies dann den Zähler: So viele Teile werden betrachtet.'],
-    exampleTex:'\\frac{3}{5}:\quad 5\\text{ gleich große Teile, davon }3\\text{ gemeint}'
+    exampleTex:'\\frac{3}{5}:\\quad 5\\text{ gleich große Teile, davon }3\\text{ gemeint}'
   },
   proper_improper:{
     title:'Brucharten unterscheiden',
@@ -93,13 +93,13 @@ const STRATEGIES={
     title:'Bruchteil einer Zahl',
     rule:'Um einen Bruchteil einer Zahl zu berechnen, wird zuerst durch den Nenner dividiert und danach mit dem Zähler multipliziert.',
     steps:['Teile die Zahl durch den Nenner. Damit erhältst du einen Teil.','Multipliziere diesen Teil mit dem Zähler.'],
-    exampleTex:'\\frac{3}{4}\\text{ von }20:\quad20:4=5,\\quad5\\cdot3=15'
+    exampleTex:'\\frac{3}{4}\\text{ von }20:\\quad20:4=5,\\quad5\\cdot3=15'
   },
   whole_from_part:{
     title:'Das Ganze bestimmen',
     rule:'Wenn ein Bruchteil gegeben ist, wird zuerst der Wert eines Teils bestimmt und danach auf alle Teile hochgerechnet.',
-    steps:['Teile den gegebenen Wert durch den Zähler. Damit erhältst du einen Teil.','Multipliziere einen Teil mit dem Nenner.'],
-    exampleTex:'\\frac{3}{4}\\text{ sind }18:\quad18:3=6,\\quad6\\cdot4=24'
+    steps:['Teile den gegebenen Wert durch den Zähler. Damit erhältst du einen Teil.','Multipliziere den Wert eines Teils mit dem Nenner.'],
+    exampleTex:'\\frac{3}{4}\\text{ sind }18:\\quad18:3=6,\\quad6\\cdot4=24'
   },
   error_analysis:{
     title:'Fehler in einem Rechenweg finden',
