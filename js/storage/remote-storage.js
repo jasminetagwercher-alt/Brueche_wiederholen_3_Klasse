@@ -1,0 +1,2 @@
+import {StorageAdapter} from './storage-interface.js';
+export class RemoteStorageAdapter extends StorageAdapter{constructor(url=''){super();this.url=url}async save(data){if(!this.url)return{skipped:true};const response=await fetch(this.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(data)});if(!response.ok)throw new Error('Remote-Speicherung fehlgeschlagen.');return{ok:true}}async load(){return null}async clear(){return true}}
