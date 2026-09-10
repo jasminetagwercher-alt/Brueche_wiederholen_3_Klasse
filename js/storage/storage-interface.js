@@ -1,0 +1,1 @@
+export class StorageAdapter{async load(){throw new Error('load() nicht implementiert')}async save(_data){throw new Error('save() nicht implementiert')}async clear(){throw new Error('clear() nicht implementiert')}async export(data){return data}}
