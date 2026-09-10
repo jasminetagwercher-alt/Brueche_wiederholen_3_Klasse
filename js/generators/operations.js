@@ -1,4 +1,5 @@
 import {Fraction,gcd,lcm} from '../core/fraction.js';
+import {buildOperationSolutionPlan} from '../didactics/operation-plans.js';
 import {makeId,pick,randomInt,randomReducedFraction} from './generator-utils.js';
 
 const F=(n,d)=>new Fraction(n,d);
@@ -48,14 +49,14 @@ function solutionSteps(skill,a,b,result){
     const common=lcm(a.denominator,b.denominator),aNum=a.numerator*(common/a.denominator),bNum=b.numerator*(common/b.denominator),symbol=skill==='add'?'+':'-';
     return[`Gemeinsamer Nenner: ${common}`,`\\frac{${aNum}}{${common}} ${symbol} \\frac{${bNum}}{${common}}`,`Ergebnis vollständig gekürzt: \\frac{${result.numerator}}{${result.denominator}}`];
   }
-  if(skill==='multiply')return[`Zähler: ${a.numerator}\\cdot${b.numerator}`,`Nenner: ${a.denominator}\\cdot${b.denominator}`,`Vollständig gekürzt: \\frac{${result.numerator}}{${result.denominator}}`];
-  return[`Kehrwert des zweiten Bruchs: \\frac{${b.denominator}}{${b.numerator}}`,`Dann multiplizieren und kürzen.`,`Ergebnis: \\frac{${result.numerator}}{${result.denominator}}`];
+  if(skill==='multiply')return[`Zähler mit Zähler und Nenner mit Nenner multiplizieren.`,`Wenn möglich, vor dem Multiplizieren kürzen.`,`Ergebnis: \\frac{${result.numerator}}{${result.denominator}}`];
+  return[`Kehrwert des zweiten Bruchs bilden.`,`Die Division als Multiplikation mit dem Kehrwert anschreiben.`,`Wenn möglich kürzen, dann multiplizieren: \\frac{${result.numerator}}{${result.denominator}}`];
 }
 
 export function generateOperation(skill,difficulty=1){
   const factories={add:addOperands,subtract:subtractOperands,multiply:multiplyOperands,divide:divideOperands};
   if(!factories[skill])return null;
   const [a,b]=factories[skill](difficulty),op={add:'+',subtract:'-',multiply:'\\cdot',divide:':' }[skill],result={add:a.add(b),subtract:a.subtract(b),multiply:a.multiply(b),divide:a.divide(b)}[skill];
-  const hints={add:['Beim Addieren müssen die Teile gleich groß sein.','Finde einen gemeinsamen Nenner und erweitere beide Brüche passend.'],subtract:['Beim Subtrahieren müssen die Teile gleich groß sein.','Finde einen gemeinsamen Nenner und erweitere beide Brüche passend.'],multiply:['Multipliziere Zähler mit Zähler und Nenner mit Nenner.','Prüfe danach, ob du vollständig kürzen kannst.'],divide:['Beim Dividieren brauchst du den Kehrwert des zweiten Bruchs.','Multipliziere anschließend mit diesem Kehrwert.']}[skill];
-  return{id:makeId(skill),skill,difficulty,type:'fraction',answerType:'fraction',promptText:'Berechne und kürze vollständig.',promptTex:`\\frac{${a.numerator}}{${a.denominator}} ${op} \\frac{${b.numerator}}{${b.denominator}}`,operands:[a,b],correctAnswer:result,requireReduced:true,hints,solutionSteps:solutionSteps(skill,a,b,result)};
+  const hints={add:['Bringe die Brüche zuerst auf einen gemeinsamen Nenner.','Erweitere beide Brüche so, dass sie gleichnamig sind.'],subtract:['Bringe die Brüche zuerst auf einen gemeinsamen Nenner.','Erweitere beide Brüche so, dass sie gleichnamig sind.'],multiply:['Multipliziere Zähler mit Zähler und Nenner mit Nenner.','Prüfe, ob du vor dem Multiplizieren kürzen kannst.'],divide:['Bilde zuerst den Kehrwert des zweiten Bruchs.','Schreibe die Division als Multiplikation mit dem Kehrwert an.']}[skill];
+  return{id:makeId(skill),skill,difficulty,type:'fraction',answerType:'fraction',promptText:'Berechne und kürze vollständig.',promptTex:`\\frac{${a.numerator}}{${a.denominator}} ${op} \\frac{${b.numerator}}{${b.denominator}}`,operands:[a,b],correctAnswer:result,requireReduced:true,hints,solutionSteps:solutionSteps(skill,a,b,result),solutionPlan:buildOperationSolutionPlan(skill,a,b,result)};
 }
