@@ -1,7 +1,0 @@
-BRUCH-CHECK – ANFORDERUNGSDOKUMENT
-Interaktive Mathematik-Wiederholung „Bruchrechnen“ – 3. Klasse Mittelschule Österreich
-Version 0.1 – Grundlage für eine modular erweiterbare GitHub-Pages-Anwendung
-
-Verbindliche Produktgrundlage: vollständige Fassung aus dem Projektbrief dieser Sitzung. Kernanforderungen: diagnostische und adaptive Wiederholung; vier Phasen Bruch-Check, individuelles Training, Bruch-Mix und Abschlusscheck; modulare ES-Module; zentrale exakte Bruchrechnung ohne primäre Floating-Point-Logik; KaTeX; wiederverwendbarer Zahlenstrahl; semantische Antwortprüfung; gestufte Hilfen; Fehlkonzept-Erkennung; Kompetenzmodell; LocalStorage und vorbereiteter Remote-Adapter; GitHub-Pages-Betrieb ohne Build-Schritt; Tests der Mathematik-Engine; Erweiterbarkeit für spätere Mathematikthemen.
-
-Hinweis: Die ausführliche 24-Abschnitte-Fassung wurde von der Auftraggeberin als Quelldokument bereitgestellt und ist die maßgebliche Spezifikation für Version 1.
