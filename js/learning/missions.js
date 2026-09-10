@@ -42,7 +42,8 @@ export function buildMissionSequence(missionId,skillState={}){
   while(result.length<mission.length){
     const weighted=[];
     for(const skill of mission.skills){
-      const weight=weakness(skillState,skill)*(result.at(-1)===skill?.id?0.3:1);
+      const repetitionPenalty=result.at(-1)===skill?0.3:1;
+      const weight=weakness(skillState,skill)*repetitionPenalty;
       for(let i=0;i<Math.max(1,Math.ceil(weight));i++)weighted.push(skill);
     }
     let next=weighted[Math.floor(Math.random()*weighted.length)]||mission.skills[0];
@@ -74,7 +75,6 @@ export function missionStatus(session,missionOrId){
   if((progress?.index||0)>0)return'in_progress';
   const statuses=mission.diagnosticSkills.map(skill=>diagnosticSkillStatus(session,skill));
   if(statuses.some(s=>s==='practice'))return'recommended';
-  if(statuses.some(s=>s==='secure')&&!statuses.some(s=>s==='not_checked'))return'secure';
   if(statuses.some(s=>s==='secure'))return'secure';
   return'optional';
 }
