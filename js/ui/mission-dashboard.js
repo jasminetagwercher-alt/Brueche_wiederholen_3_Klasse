@@ -38,7 +38,7 @@ export function missionDashboardTemplate(session,{justFinishedDiagnostic=false}=
   const cards=MISSIONS.map(mission=>{
     const status=missionStatus(session,mission),progress=missionProgress(session,mission.id);
     return `<article class="mission-card ${status}">
-      <div class="mission-card-top"><span class="mission-code">${mission.code}</span><span class="mission-status">${cardStateText(status,progress)}</span></div>
+      <div class="mission-card-top"><div class="mission-identity"><span class="mission-code">${mission.code}</span><span class="mission-call-sign">${escapeHtml(mission.callSign)}</span></div><span class="mission-status">${cardStateText(status,progress)}</span></div>
       <h2>${escapeHtml(mission.title)}</h2>
       <p>${escapeHtml(mission.subtitle)}</p>
       <div class="mission-meta"><span>${mission.length} kurze Aufgaben</span>${status==='recommended'?'<span class="recommended-chip">Empfohlen</span>':''}</div>
@@ -47,7 +47,7 @@ export function missionDashboardTemplate(session,{justFinishedDiagnostic=false}=
   }).join('');
   const open=summary.recommended;
   const finalText=open>0?`${open} ${open===1?'empfohlene Mission ist':'empfohlene Missionen sind'} noch offen. Du kannst den Final Check trotzdem starten.`:'Alle empfohlenen Missionen sind erledigt. Du bist bereit für den Final Check.';
-  const banner=justFinishedDiagnostic?`<div class="diagnostic-finish-banner"><span class="diagnostic-finish-icon">✓</span><div><strong>Schnellcheck geschafft</strong><p>Ab jetzt musst du nicht mehr alles bearbeiten. Die empfohlenen Missionen richten sich nach deinem Schnellcheck.</p></div></div>`:'';
+  const banner=justFinishedDiagnostic?`<div class="diagnostic-finish-banner"><span class="diagnostic-finish-icon">✓</span><div><strong>Systemcheck abgeschlossen</strong><p>Ab jetzt musst du nicht mehr alles bearbeiten. Die empfohlenen Missionen richten sich nach deinem Schnellcheck.</p></div></div>`:'';
   return `<section class="card dashboard-card">
     ${journeyNav('missions')}
     ${banner}
@@ -68,7 +68,7 @@ export function missionCompleteTemplate({mission,stats}){
   return `<section class="card mission-complete-card">
     ${journeyNav('missions')}
     <div class="mission-complete-mark">✓</div>
-    <p class="eyebrow">Mission geschafft</p>
+    <p class="eyebrow">Mission ${mission.code} · ${escapeHtml(mission.callSign)} geschafft</p>
     <h1>${escapeHtml(mission.title)}</h1>
     <p class="lead">Dieser Bereich ist erledigt. Du kannst jetzt aufhören oder dir eine andere Mission aussuchen.</p>
     <div class="mission-result-grid">
