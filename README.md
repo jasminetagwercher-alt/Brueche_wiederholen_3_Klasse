@@ -1,35 +1,33 @@
 # Bruch-Check – Bruchrechnen wiederholen
 
-Interaktive, diagnostische und adaptive Lernplattform für die 3. Klasse Mittelschule Österreich. Version 1 ist als statische GitHub-Pages-Anwendung ohne Build-Schritt konzipiert.
+Interaktive, diagnostische und adaptive Lernplattform für die 3. Klasse Mittelschule Österreich. Die Anwendung läuft als statische GitHub-Pages-Seite ohne Build-Schritt.
 
 ## Funktionen
 
 - vier klar sichtbare Phasen: Bruch-Check, individuelles Training, Bruch-Mix, Abschlusscheck
-- Lernstrecken-Übersicht und Abschnittsnavigation
-- kurze Konzentrationsstopps etwa alle fünf Aufgaben sowie ein deutlicher Übergang nach jeder Phase
+- Lernstrecken-Übersicht und Konzentrationsstopps
 - exakte zentrale Bruchrechnung über `Fraction`
-- echte/unechte Brüche und gemischte Zahlen
-- Kürzen, Erweitern und Äquivalenz
-- Vergleichen und Ordnen
-- interaktiver Zahlenstrahl mit Raster-Snapping und Tastaturbedienung
+- dynamische Aufgabengeneratoren mit Wiederholungssperre
+- österreichische mathematische Terminologie
+- „So geht’s“-Erklärungen mit unabhängigen Beispielen
+- horizontale Rechenzeilen wie im Mathematikheft
+- geführte, teilweise geführte und freie Rechenwege
+- semantische Prüfung einzelner Rechenschritte
+- Adaptivität: Schwierigkeit und Unterstützungsgrad sind getrennte Achsen
+- Brucharten, gemischte Zahlen, Kürzen, Erweitern und Gleichwertigkeit
+- Vergleichen, Ordnen und interaktiver Zahlenstrahl
 - Bruch ↔ Dezimalzahl
-- Bruchteil einer Zahl und Ganzes aus Bruchteil
+- Bruchteil einer Zahl und Ganzes aus einem Bruchteil
 - Addition, Subtraktion, Multiplikation und Division
-- gestufte Hilfen
-- einfache Fehlkonzept-Erkennung
-- Kompetenzmodell und regelbasierte Adaptivität
-- dynamische Aufgabengeneratoren mit Schwierigkeitsstufen und Sperre gegen zu frühe Wiederholungen
+- Fehlkonzept-Erkennung, Hilfestufen und Plausibilitätsfragen
 - lokaler Sitzungsstand per `localStorage`
-- vorbereitete Remote-Speicherschnittstelle
-- JSON-Ergebnisexport
+- vorbereitete Remote-Speicherschnittstelle und JSON-Ergebnisexport
 - KaTeX-Darstellung
-- automatische Core- und Generator-Smoke-Tests über GitHub Actions
+- automatische Core-, Generator- und Rechenweg-Tests über GitHub Actions
 
 ## Lokale Nutzung
 
-Da ES Modules verwendet werden, sollte die Anwendung über einen kleinen lokalen Webserver geöffnet werden und nicht direkt per `file://`.
-
-Beispiel:
+Da ES Modules verwendet werden, sollte die Anwendung über einen kleinen lokalen Webserver geöffnet werden:
 
 ```bash
 python -m http.server 8000
@@ -37,23 +35,23 @@ python -m http.server 8000
 
 Danach `http://localhost:8000` öffnen.
 
-Die Tests benötigen nur Node.js:
+Tests:
 
 ```bash
 npm test
 ```
 
-Es werden keine npm-Pakete installiert; der Testbefehl verwendet ausschließlich Node-Bordmittel.
+Es werden keine npm-Pakete benötigt; die Tests verwenden Node-Bordmittel.
 
 ## GitHub Pages
 
-1. Repository auf GitHub öffnen.
+1. Repository öffnen.
 2. **Settings → Pages**.
-3. Als Quelle **Deploy from a branch** wählen.
+3. **Deploy from a branch** wählen.
 4. Branch `main`, Ordner `/ (root)` auswählen.
 5. Speichern.
 
-Die Anwendung benötigt keinen Build-Schritt. `index.html` liegt im Repository-Root. KaTeX wird über jsDelivr geladen; Schülergeräte benötigen deshalb beim ersten Laden Internetzugriff.
+KaTeX wird über jsDelivr geladen; Schülergeräte benötigen beim Laden Internetzugriff.
 
 ## Projektstruktur
 
@@ -61,16 +59,22 @@ Die Anwendung benötigt keinen Build-Schritt. `index.html` liegt im Repository-R
 /
 ├─ index.html
 ├─ css/
-│  └─ main.css
+│  ├─ main.css
+│  └─ calculation.css
 ├─ js/
-│  ├─ app.js                  # Ablaufkoordination
-│  ├─ config.js               # zentrale Konfiguration
+│  ├─ app.js
+│  ├─ config.js
 │  ├─ core/
-│  │  ├─ fraction.js          # exakte Bruchrechnung
-│  │  └─ answer-validator.js  # semantische Antwortprüfung
+│  │  ├─ fraction.js
+│  │  ├─ answer-validator.js
+│  │  └─ step-validator.js
+│  ├─ didactics/
+│  │  ├─ terminology-at.js
+│  │  ├─ strategy-registry.js
+│  │  └─ operation-plans.js
 │  ├─ generators/
-│  │  ├─ registry.js          # verbindet Skills mit Generatoren
-│  │  ├─ generator-utils.js   # Zufall, Signaturen, Wiederholungssperre
+│  │  ├─ registry.js
+│  │  ├─ generator-utils.js
 │  │  ├─ basic.js
 │  │  ├─ conversions.js
 │  │  ├─ operations.js
@@ -78,6 +82,7 @@ Die Anwendung benötigt keinen Build-Schritt. `index.html` liegt im Repository-R
 │  ├─ learning/
 │  │  ├─ skills.js
 │  │  ├─ adaptive-engine.js
+│  │  ├─ support-engine.js
 │  │  ├─ misconception-engine.js
 │  │  └─ session.js
 │  ├─ storage/
@@ -88,122 +93,167 @@ Die Anwendung benötigt keinen Build-Schritt. `index.html` liegt im Repository-R
 │     ├─ inputs.js
 │     ├─ math-renderer.js
 │     ├─ navigation.js
-│     └─ number-line.js
+│     ├─ number-line.js
+│     ├─ calculation-line.js
+│     └─ strategy-help.js
 ├─ tests/
 │  ├─ fraction.test.mjs
-│  └─ generators.test.mjs
+│  ├─ generators.test.mjs
+│  └─ solution-plans.test.mjs
 └─ .github/workflows/tests.yml
 ```
 
-## Lernfluss und Pausen
-
-Die Anwendung soll nicht als lange ununterbrochene Aufgabenserie wirken. Jede Phase besitzt eine sichtbare Position in der Lernstrecke. Innerhalb längerer Phasen wird nach einer konfigurierbaren Anzahl von Aufgaben ein kurzer Stopp angezeigt. Der Schüler entscheidet selbst, wann er fortsetzt. Nach jeder Phase folgt eine eigene Abschluss- und Übergangsseite.
-
-Die Anzahl der Aufgaben zwischen zwei Stopps wird zentral in `js/config.js` über `breakEvery` festgelegt. Die Übersicht kann während der Bearbeitung geöffnet werden; abgeschlossene Phasen und die aktuelle Position bleiben sichtbar.
-
 ## Mathematische Architektur
 
-Alle Brüche werden zentral als `Fraction` mit ganzzahligem `numerator` und `denominator` behandelt. Die Kernoperationen normalisieren Vorzeichen, verbieten Nenner 0 und reduzieren Ergebnisse exakt. Vergleich und Äquivalenz basieren auf Kreuzmultiplikation statt auf gerundeten Dezimalwerten. Dezimaleingaben werden zunächst als rationale Zahl rekonstruiert.
+Alle Brüche werden zentral als `Fraction` mit ganzzahligem `numerator` und `denominator` behandelt. Die Kernoperationen normalisieren Vorzeichen, verbieten Nenner 0 und reduzieren Ergebnisse exakt. Vergleich und Äquivalenz basieren auf exakter Bruchrechnung statt auf gerundeten Dezimalwerten.
 
-Generatoren dürfen mathematische Operationen nicht selbst nachimplementieren. Sie erzeugen nur Aufgabenparameter und verwenden die Core-Engine für Ergebnisse.
+Generatoren implementieren keine eigene Bruchrechnung. Sie erzeugen Aufgabenparameter und verwenden die Core-Engine für Ergebnisse.
+
+## Österreichische Terminologie
+
+`js/didactics/terminology-at.js` ist die zentrale Stelle für die fachsprachlichen Begriffe. In der Schüleroberfläche soll österreichische Schulbuchterminologie verwendet werden. Dazu gehören insbesondere:
+
+- Zähler und Nenner
+- echter Bruch
+- unechter Bruch
+- uneigentlicher Bruch
+- gemischte Zahl
+- gleichwertige Brüche
+- gleichnamig machen
+- gemeinsamer Nenner
+- kürzen und erweitern
+- Kehrwert
+
+Die Formulierung „Scheinbruch“ wurde in der Schüleroberfläche durch „uneigentlicher Bruch“ ersetzt.
+
+## Fachdidaktische Referenzen
+
+Die eigenen Erklärtexte orientieren sich fachsprachlich und bei typischen Lösungswegen an frei zugänglichen österreichischen öbv-Materialien. Inhalte werden nicht wörtlich übernommen; die Quellen dienen als Terminologie- und Strukturreferenz.
+
+- öbv, *Schritt für Schritt Mathematik 2*, Brüche und gemischte Zahlen: https://www.oebv.at/flippingbook/9783209090003/39/
+- öbv, *Lösungswege 1*, Brucharten und gemischte Zahlen: https://www.oebv.at/flippingbook/9783209111258/94/
+- öbv, *Lösungswege 2*, Zusammenfassung Bruchrechnen: https://www.oebv.at/flippingbook/9783209122520/112/
+- öbv, *Lösungswege 3*, Multiplizieren und Dividieren rationaler Zahlen: https://www.oebv.at/flippingbook/9783209111272/42/
+
+Für neue Inhalte soll zuerst geprüft werden, ob die verwendeten Begriffe und Rechenwege zur österreichischen Schulbuchsprache passen.
+
+## Rechenweg-Architektur
+
+Die Grundrechnungsarten können einen strukturierten `solutionPlan` mitführen. Dieser beschreibt nicht bloß die Endlösung, sondern mathematische Zwischenschritte.
+
+Beispiel Division:
+
+```text
+3/4 : 2/5
+→ Kehrwert bilden / Division als Multiplikation anschreiben
+→ wenn sinnvoll kürzen
+→ multiplizieren
+→ Endergebnis prüfen
+```
+
+In der Oberfläche wird dieser Ablauf als **eine horizontale Rechenzeile** dargestellt, zum Beispiel sinngemäß:
+
+```text
+3/4 : 2/5 = 3/4 · 5/2 = … = 15/8
+```
+
+Erledigte Schritte bleiben sichtbar; der nächste Eingabeschritt wird rechts angefügt. Dadurch ähnelt der Rechenweg einer Rechnung im Heft statt einer vertikalen Formularfolge. Auf kleinen Bildschirmen kann die Rechenzeile horizontal verschoben werden, ohne mathematische Elemente zu verkleinern.
+
+`step-validator.js` prüft Zwischenschritte semantisch. Die UI kennt die mathematische Prüflogik nicht.
+
+## Schwierigkeit und Unterstützung getrennt
+
+Die mathematische Schwierigkeit einer Aufgabe und der Unterstützungsgrad sind bewusst getrennt.
+
+Unterstützungsmodi:
+
+- `guided`: geführter Rechenweg mit mehreren geprüften Zwischenschritten
+- `partial`: nur zentrale strategische Zwischenschritte werden vorgegeben
+- `free`: normale freie Ergebniseingabe
+
+Aktuelle Regel in `support-engine.js`:
+
+- Diagnose: freies Rechnen
+- individuelles Training, unsicher: geführt
+- individuelles Training, im Aufbau: teilweise geführt
+- individuelles Training, sicher: frei
+- Bruch-Mix: höchstens teilweise geführt bei weiterhin unsicheren Bereichen
+- Abschlusscheck: freies Rechnen
+
+Damit kann Unterstützung schrittweise ausgeblendet werden, ohne gleichzeitig die Zahlenwerte einfacher machen zu müssen.
+
+## „So geht’s“-Erklärungen
+
+`strategy-registry.js` enthält kurze Erklärungen für die zentralen Kompetenzen. Jede Erklärung besteht aus:
+
+- einer Regel in österreichischer Fachsprache
+- wenigen nachvollziehbaren Denkschritten
+- einem Beispiel mit **anderen Zahlen als in der aktuellen Aufgabe**
+
+Die Erklärung wird im Training bzw. Bruch-Mix über „So geht’s“ geöffnet. Ihre Nutzung zählt als Hilfe; dadurch wird eine danach gelöste Aufgabe nicht fälschlich als vollständig selbstständig gewertet.
 
 ## Aufgabengeneratoren und Wiederholungen
 
-Version 1 verwendet keine kleinen festen Listen als primäre Aufgabenquelle. Zahlenwerte werden innerhalb didaktisch begrenzter Bereiche dynamisch erzeugt. Die Schwierigkeit beeinflusst unter anderem Nennerbereiche, gemeinsamen Nenner und das Auftreten unechter Ergebnisse.
+Zahlenwerte werden innerhalb didaktisch begrenzter Bereiche dynamisch erzeugt. Die Schwierigkeit beeinflusst unter anderem Nennerbereiche, gemeinsamen Nenner und das Auftreten unechter Ergebnisse.
 
-Jede erzeugte Aufgabe erhält eine inhaltliche Signatur. `generateTask()` kann eine Liste zuletzt gezeigter Signaturen erhalten und erzeugt dann eine neue Variante. Die Länge dieses Gedächtnisses wird in `js/config.js` über `recentTaskMemory` gesteuert. Dadurch werden identische Zahlenkombinationen nicht unnötig kurz hintereinander wiederholt.
+Jede Aufgabe erhält eine inhaltliche Signatur. `generateTask()` kann zuletzt gezeigte Signaturen vermeiden; die Gedächtnislänge steht in `js/config.js` unter `recentTaskMemory`.
 
 ## Neuen Skill ergänzen
 
-1. Neue Skill-ID in `js/learning/skills.js` registrieren.
-2. Einen Generator implementieren oder einen bestehenden Generator erweitern.
-3. `generateTask()` in `js/generators/registry.js` mit der neuen Skill-ID verbinden.
-4. Falls nötig einen neuen UI-Aufgabentyp ergänzen.
-5. Diagnose-, Mix- oder Abschluss-Sequenz in `adaptive-engine.js` erweitern.
-6. Tests ergänzen.
+1. Skill-ID in `js/learning/skills.js` registrieren.
+2. Generator implementieren oder erweitern.
+3. Skill in `js/generators/registry.js` verbinden.
+4. Passende Erklärung in `didactics/strategy-registry.js` ergänzen.
+5. Falls ein geführter Rechenweg sinnvoll ist, einen strukturierten Lösungsplan ergänzen.
+6. Gegebenenfalls neuen UI-Aufgabentyp implementieren.
+7. Diagnose-, Training-, Mix- oder Abschlusslogik anpassen.
+8. Tests ergänzen.
 
-Die Skill-ID sollte dauerhaft stabil bleiben, weil sie in gespeicherten Ergebnisdaten vorkommt.
+## Neue Rechenweg-Art ergänzen
 
-## Neuen Aufgabengenerator ergänzen
-
-Ein Generator soll ein Task-Objekt mit mindestens folgenden Feldern liefern:
-
-```js
-{
-  id,
-  skill,
-  difficulty,
-  type,
-  answerType,
-  promptText,
-  promptTex,
-  correctAnswer,
-  hints,
-  solutionSteps
-}
-```
-
-Optionale Metadaten wie `operands`, `requireReduced`, `meta` oder Komponenten-Konfigurationen können ergänzt werden. Die Antwortprüfung soll nicht im Generator dupliziert werden. Neue dynamische Generatoren sollten über `generator-utils.js` eine Aufgabe-Signatur erhalten und in `generators.test.mjs` mindestens mit einem Smoke-Test abgedeckt werden.
-
-## Neue Fehlkonzept-Regel ergänzen
-
-`js/learning/misconception-engine.js` enthält die Regeln. Eine Regel erhält die Aufgabe und die semantisch geparste Schülerantwort und gibt bei Treffer z. B. zurück:
+Rechenweg-Pläne liegen nicht in der UI. Ein Plan definiert Schritte etwa mit:
 
 ```js
 {
-  id: 'divide_no_reciprocal',
-  message: '...'
+  id: 'make-like',
+  kind: 'pair',
+  operator: '+',
+  expected: [leftFraction, rightFraction],
+  prompt: 'Mache die Brüche zuerst gleichnamig.',
+  displayTex: '...',
+  keepInPartial: true
 }
 ```
 
-Die UI kennt die konkrete Regel nicht; sie zeigt nur das Feedback der Engine an.
+`CalculationLine` rendert diese Daten. `step-validator.js` prüft die Eingaben. Dadurch können später Rechenwege für Prozentrechnung, Terme oder Gleichungen mit eigenen Schrittarten ergänzt werden, ohne die gesamte Aufgabenoberfläche neu zu schreiben.
 
-## Adaptivität
+## Fehlkonzept-Regeln
 
-Version 1 verwendet bewusst transparente Regeln:
+`js/learning/misconception-engine.js` enthält typische Fehlerregeln. Die Feedback-Engine ist von UI und Generatoren getrennt. Neue Regeln sollen möglichst erklären, **welcher Denkfehler wahrscheinlich vorliegt**, statt nur „falsch“ zurückzugeben.
 
-- unsichere Skills werden stärker gewichtet
-- sichere Skills werden seltener eingestreut
-- unmittelbar wiederholte Skills werden abgewertet
-- zwei sichere Lösungen können die Schwierigkeit erhöhen
-- wiederholte Fehler können sie senken
-- zuletzt gezeigte konkrete Aufgabenvarianten werden zusätzlich über ihre Signatur vermieden
+## Speicherung
 
-Die Skill-Auswahl liegt in `js/learning/adaptive-engine.js`; die Vermeidung konkreter Aufgabenwiederholungen liegt in der Generator-Schicht. Beide Mechanismen können unabhängig weiterentwickelt werden.
+`LocalStorageAdapter` speichert den Sitzungsstand lokal. `RemoteStorageAdapter` ist vorbereitet; seine URL wird ausschließlich in `js/config.js` konfiguriert. Es dürfen keine geheimen Schlüssel in GitHub-Pages-Browsercode gespeichert werden.
 
-## Speicherung und späterer Google-Sheets-Anschluss
+Am Ende können unter anderem Diagnose, Abschluss, Kompetenzstände, Fehlversuche, Hilfen, Fehlkonzepte und Bearbeitungsdauer exportiert werden. Es wird keine automatische Schulnote erzeugt.
 
-`LocalStorageAdapter` speichert den aktuellen Sitzungsstand lokal im Browser. Die Anwendung kann nach einem Reload fortgesetzt werden. Auch Lernphase, Aufgabensequenz, bereits angezeigte Aufgaben-Signaturen und absolvierte Pausen werden gespeichert.
+## Qualitätssicherung
 
-`RemoteStorageAdapter` ist bereits vorbereitet. Die URL wird ausschließlich in `js/config.js` über `remoteStorageUrl` konfiguriert. Solange sie leer ist, arbeitet Bruch-Check vollständig lokal.
+`npm test` prüft aktuell:
 
-Für eine spätere Google-Apps-Script-/Google-Sheets-Anbindung sollte der Endpoint JSON entgegennehmen und keine geheimen Schlüssel im Frontend verlangen. GitHub Pages ist öffentlich; Secrets dürfen daher niemals in `config.js` oder anderem Browsercode gespeichert werden.
+- Syntax zentraler Browsermodule
+- mathematische Fraction-Core-Funktionen
+- Generator-Smoke-Tests und Aufgabenvielfalt
+- strukturierte Rechenweg-Pläne
+- semantische Zwischenschrittprüfung
+- Auswahl des Unterstützungsgrads
 
-## Ergebnisdaten
+GitHub Actions führt diese Tests bei Änderungen automatisch aus.
 
-Am Ende werden u. a. exportiert:
+## Bekannte Erweiterungspunkte
 
-- Zeitstempel und Session-ID
-- Name/Kürzel und Klasse
-- Diagnose- und Abschlusswert
-- Kompetenzdaten je Skill
-- Fehlversuche
-- Hilfen
-- erkannte Fehlkonzepte
-- absolvierte Konzentrationsstopps
-- Bearbeitungsdauer
-
-Die Anwendung erzeugt bewusst keine automatische Schulnote.
-
-## Erweiterung auf weitere Mathematikthemen
-
-Die aktuelle Trennung von Mathematik-Core, Generatoren, Skills, Adaptivität, Feedback/UI, Navigation und Storage ist darauf ausgelegt, später Themen wie Prozentrechnung, rationale Zahlen, Terme oder Gleichungen hinzuzufügen. Dabei soll die Bruch-Engine als eigenständiges Modul bestehen bleiben und `app.js` weiterhin primär den Ablauf koordinieren.
-
-## Bekannte Grenzen von Version 1
-
+- Geführte horizontale Rechenwege sind zunächst für die vier Grundrechnungsarten umgesetzt. Dieselbe Architektur kann anschließend auf Kürzen, Erweitern, gemischte Zahlen sowie Bruchteil/Ganzes ausgeweitet werden.
 - Die Adaptivität ist regelbasiert, nicht statistisch oder KI-basiert.
-- Der Zahlenstrahl verwendet in Version 1 hauptsächlich das Platzieren; der Komponentenmodus für das Ablesen markierter Werte kann in weiteren Generatoren stärker genutzt werden.
-- Ordnung erfolgt barriereärmer über Links-/Rechts-Buttons statt ausschließlich über Drag-and-Drop.
-- Remote-Speicherung ist vorbereitet, aber ohne konfigurierte URL absichtlich deaktiviert.
-
-Diese Grenzen sind Erweiterungspunkte und keine Platzhalterbuttons in der Schüleroberfläche.
+- Zahlenstrahl-Ableseaufgaben können noch stärker ausgebaut werden.
+- Ordnen erfolgt zusätzlich über barrierearme Links-/Rechts-Steuerung.
+- Remote-Speicherung ist ohne konfigurierte URL absichtlich deaktiviert.
