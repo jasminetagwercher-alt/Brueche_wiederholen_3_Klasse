@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {MISSIONS,DIAGNOSTIC_SKILLS,FINAL_SKILLS,buildMissionSequence,getMission,missionStatus,missionDashboardSummary} from '../js/learning/missions.js';
+import {MISSIONS,DIAGNOSTIC_SKILLS,FINAL_SKILLS,buildMissionSequence,getMission,missionStatus,missionDashboardSummary,missionProgress} from '../js/learning/missions.js';
 
 assert.equal(DIAGNOSTIC_SKILLS.length,10);
 assert.equal(FINAL_SKILLS.length,8);
@@ -31,8 +31,10 @@ const session={
 
 assert.equal(missionStatus(session,getMission('bruchcode')),'secure');
 assert.equal(missionStatus(session,getMission('operatoren')),'recommended');
-session.missions.operatoren={completed:false,index:2,sequence:['add','divide','multiply','subtract','add']};
+session.missions.operatoren={completed:false,index:0,startedAt:new Date().toISOString(),tasks:[{id:'op-1'},{id:'op-2'},{id:'op-3'},{id:'op-4'},{id:'op-5'}]};
 assert.equal(missionStatus(session,getMission('operatoren')),'in_progress');
+session.answers.push({phase:'mission',missionId:'operatoren',taskId:'op-1',correct:true,status:'correct'});
+assert.equal(missionProgress(session,'operatoren').index,1);
 session.missions.operatoren.completed=true;
 assert.equal(missionStatus(session,getMission('operatoren')),'completed');
 
