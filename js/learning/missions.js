@@ -67,12 +67,17 @@ export function diagnosticSkillStatus(session,skill){
   return'practice';
 }
 
+function solvedMissionTasks(session,progress){
+  const ids=new Set((progress?.tasks||[]).map(task=>task.id));
+  return new Set((session.answers||[]).filter(answer=>answer.correct&&ids.has(answer.taskId)).map(answer=>answer.taskId)).size;
+}
+
 export function missionStatus(session,missionOrId){
   const mission=typeof missionOrId==='string'?getMission(missionOrId):missionOrId;
   if(!mission)return'unknown';
   const progress=session.missions?.[mission.id];
   if(progress?.completed)return'completed';
-  if((progress?.index||0)>0)return'in_progress';
+  if(progress?.startedAt||solvedMissionTasks(session,progress)>0)return'in_progress';
   const statuses=mission.diagnosticSkills.map(skill=>diagnosticSkillStatus(session,skill));
   if(statuses.some(s=>s==='practice'))return'recommended';
   if(statuses.some(s=>s==='secure'))return'secure';
@@ -92,5 +97,7 @@ export function missionDashboardSummary(session){
 export function missionProgress(session,id){
   const mission=getMission(id);if(!mission)return null;
   const p=session.missions?.[id]||{};
-  return{index:p.index||0,total:(p.sequence?.length||mission.length),completed:Boolean(p.completed),runs:p.runs||0};
+  const total=p.tasks?.length||p.sequence?.length||mission.length;
+  const done=solvedMissionTasks(session,p);
+  return{index:done,total,completed:Boolean(p.completed),runs:p.runs||0};
 }
