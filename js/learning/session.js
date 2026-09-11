@@ -2,7 +2,7 @@ import {createSkillState,updateSkill} from './skills.js';
 
 export function createSession(profile={name:'',className:''}){
   return{
-    version:3,
+    version:4,
     id:crypto.randomUUID?.()||Math.random().toString(36).slice(2),
     profile,
     startedAt:new Date().toISOString(),
@@ -19,11 +19,14 @@ export function createSession(profile={name:'',className:''}){
     phaseSequence:null,
     quickBreakSeen:false,
     missions:{},
-    activeMission:null
+    activeMission:null,
+    blockTasks:{diagnostic:null,final:null},
+    drafts:{}
   };
 }
 
 export function recordAttempt(session,task,result,hintLevel,rawAnswer){
+  const alreadyCompleted=session.answers.some(answer=>answer.taskId===task.id&&answer.correct);
   session.answers.push({
     timestamp:new Date().toISOString(),
     phase:session.phase,
@@ -37,8 +40,8 @@ export function recordAttempt(session,task,result,hintLevel,rawAnswer){
     misconception:result.misconception||null,
     rawAnswer
   });
-  if(result.status!=='almost'&&result.status!=='invalid')updateSkill(session.skills,task.skill,{correct:result.correct,hintLevel,misconception:result.misconception});
-  if(result.correct&&!hintLevel)session.independentCorrect++;
+  if(!alreadyCompleted&&result.status!=='almost'&&result.status!=='invalid')updateSkill(session.skills,task.skill,{correct:result.correct,hintLevel,misconception:result.misconception});
+  if(!alreadyCompleted&&result.correct&&!hintLevel)session.independentCorrect++;
   return session;
 }
 
