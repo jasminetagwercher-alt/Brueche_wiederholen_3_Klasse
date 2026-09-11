@@ -47,8 +47,11 @@ export function recordAttempt(session,task,result,hintLevel,rawAnswer){
 
 export function scorePhase(session,phase){
   const rows=session.answers.filter(a=>a.phase===phase&&a.status!=='invalid'&&a.status!=='almost');
-  if(!rows.length)return 0;
-  return Math.round(rows.filter(a=>a.correct).length/rows.length*100);
+  const firstByTask=new Map();
+  for(const row of rows){if(!firstByTask.has(row.taskId))firstByTask.set(row.taskId,row)}
+  const firstAttempts=[...firstByTask.values()];
+  if(!firstAttempts.length)return 0;
+  return Math.round(firstAttempts.filter(a=>a.correct).length/firstAttempts.length*100);
 }
 
 export function exportSession(session){
