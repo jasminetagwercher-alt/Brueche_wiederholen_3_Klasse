@@ -1,6 +1,7 @@
 import {MISSIONS,missionDashboardSummary,missionProgress,missionStatus} from '../learning/missions.js';
 
 function escapeHtml(value){return String(value??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+function estimate(length){const min=Math.max(2,Math.round(length*.9)),max=Math.max(min+1,Math.round(length*1.6));return `${min}–${max} Min.`}
 
 export function journeyNav(stage){
   const order=['diagnostic','missions','final'];
@@ -27,10 +28,10 @@ function cardStateText(status,progress){
 
 function cardButtonText(status){
   if(status==='completed')return'Noch einmal üben';
-  if(status==='in_progress')return'Fortsetzen';
-  if(status==='recommended')return'Mission starten';
-  if(status==='secure')return'Trotzdem üben';
-  return'Ausprobieren';
+  if(status==='in_progress')return'Aufgaben ansehen';
+  if(status==='recommended')return'Mission ansehen';
+  if(status==='secure')return'Aufgaben ansehen';
+  return'Aufgaben ansehen';
 }
 
 export function missionDashboardTemplate(session,{justFinishedDiagnostic=false}={}){
@@ -41,25 +42,25 @@ export function missionDashboardTemplate(session,{justFinishedDiagnostic=false}=
       <div class="mission-card-top"><div class="mission-identity"><span class="mission-code">${mission.code}</span><span class="mission-call-sign">${escapeHtml(mission.callSign)}</span></div><span class="mission-status">${cardStateText(status,progress)}</span></div>
       <h2>${escapeHtml(mission.title)}</h2>
       <p>${escapeHtml(mission.subtitle)}</p>
-      <div class="mission-meta"><span>${mission.length} kurze Aufgaben</span>${status==='recommended'?'<span class="recommended-chip">Empfohlen</span>':''}</div>
+      <div class="mission-meta"><span>${mission.length} Aufgaben</span><span>ca. ${estimate(mission.length)}</span>${status==='recommended'?'<span class="recommended-chip">Empfohlen</span>':''}</div>
       <button class="mission-start ${status==='secure'||status==='completed'?'secondary':''}" data-mission="${mission.id}" data-restart="${status==='completed'?'true':'false'}">${cardButtonText(status)}</button>
     </article>`;
   }).join('');
   const open=summary.recommended;
-  const finalText=open>0?`${open} ${open===1?'empfohlene Mission ist':'empfohlene Missionen sind'} noch offen. Du kannst den Final Check trotzdem starten.`:'Alle empfohlenen Missionen sind erledigt. Du bist bereit für den Final Check.';
-  const banner=justFinishedDiagnostic?`<div class="diagnostic-finish-banner"><span class="diagnostic-finish-icon">✓</span><div><strong>Systemcheck abgeschlossen</strong><p>Ab jetzt musst du nicht mehr alles bearbeiten. Die empfohlenen Missionen richten sich nach deinem Schnellcheck.</p></div></div>`:'';
+  const finalText=open>0?`${open} ${open===1?'empfohlene Mission ist':'empfohlene Missionen sind'} noch offen. Du kannst den Final Check trotzdem ansehen und starten.`:'Alle empfohlenen Missionen sind erledigt. Du bist bereit für den Final Check.';
+  const banner=justFinishedDiagnostic?`<div class="diagnostic-finish-banner"><span class="diagnostic-finish-icon">✓</span><div><strong>Schnellcheck abgeschlossen</strong><p>Ab jetzt musst du nicht mehr alles bearbeiten. Die empfohlenen Missionen richten sich nach deinem Schnellcheck.</p></div></div>`:'';
   return `<section class="card dashboard-card">
     ${journeyNav('missions')}
     ${banner}
     <div class="dashboard-hero">
-      <div><p class="eyebrow">Dein Bruch-Check</p><h1>Wähle deine nächste Mission</h1><p class="lead">Du musst nicht alles bearbeiten. Sichere Bereiche kannst du überspringen. Trainiere dort, wo es dir etwas bringt.</p></div>
+      <div><p class="eyebrow">Dein Bruch-Check</p><h1>Wähle deine nächste Mission</h1><p class="lead">Du musst nicht alles bearbeiten. Sichere Bereiche kannst du überspringen. Vor jeder Mission siehst du zuerst alle Aufgaben.</p></div>
       <div class="dashboard-score"><strong>${summary.secure}</strong><span>von ${summary.total}<br>sicher oder geschafft</span></div>
     </div>
     <div class="dashboard-summary"><span><strong>${summary.completed}</strong> Missionen geschafft</span><span><strong>${open}</strong> empfohlen</span></div>
     <div class="mission-grid">${cards}</div>
     <section class="final-panel ${open===0?'ready':''}">
       <div><p class="eyebrow">Final Check</p><h2>Zeig, dass du die passende Strategie selbst erkennst.</h2><p>${finalText}</p></div>
-      <button id="startFinal" class="${open>0?'secondary':''}">${open>0?'Final Check trotzdem starten':'Final Check starten'}</button>
+      <button id="startFinal" class="${open>0?'secondary':''}">Final Check ansehen</button>
     </section>
   </section>`;
 }
@@ -86,7 +87,7 @@ export function quickBreakTemplate(completed,total){
     <div class="quick-break-mark">Ⅱ</div>
     <p class="eyebrow">Kurzer Stopp</p>
     <h1>Halbzeit im Schnellcheck</h1>
-    <p class="lead">${completed} kurze Aufgaben sind geschafft. Schau einen Moment vom Bildschirm weg und mach weiter, wenn du bereit bist.</p>
+    <p class="lead">${completed} von ${total} Aufgaben sind geschafft. Du hast die restlichen Aufgaben schon gesehen – jetzt nur noch die zweite Hälfte.</p>
     ${progressDots(completed,total)}
     <div class="actions"><button id="continueQuickCheck">Weiter</button></div>
   </section>`;
