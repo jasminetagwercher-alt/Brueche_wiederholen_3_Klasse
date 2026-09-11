@@ -2,5 +2,5 @@
   "name":"bruch-check",
   "private":true,
   "type":"module",
-  "scripts":{"test":"node --check js/app.js && node --check js/ui/calculation-line.js && node --check js/ui/mission-dashboard.js && node --check js/learning/missions.js && node tests/fraction.test.mjs && node tests/generators.test.mjs && node tests/solution-plans.test.mjs && node tests/missions.test.mjs"}
+  "scripts":{"test":"node --check js/app.js && node --check js/ui/calculation-line.js && node --check js/ui/mission-dashboard.js && node --check js/ui/task-sheet.js && node --check js/learning/missions.js && node --check js/learning/task-sets.js && node tests/fraction.test.mjs && node tests/generators.test.mjs && node tests/solution-plans.test.mjs && node tests/missions.test.mjs && node tests/task-sets.test.mjs"}
 }
