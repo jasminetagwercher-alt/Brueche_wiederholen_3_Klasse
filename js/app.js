@@ -2,10 +2,9 @@ import {CONFIG} from './config.js';
 import {LocalStorageAdapter} from './storage/local-storage.js';
 import {RemoteStorageAdapter} from './storage/remote-storage.js';
 import {createSession,recordAttempt,scorePhase,exportSession} from './learning/session.js';
-import {adaptDifficulty} from './learning/adaptive-engine.js';
 import {chooseSupportMode,supportLabel} from './learning/support-engine.js';
 import {DIAGNOSTIC_SKILLS,FINAL_SKILLS,buildMissionSequence,getMission,missionDashboardSummary} from './learning/missions.js';
-import {generateTask} from './generators/registry.js';
+import {buildTaskList,reviveTaskList,completedCount,allTasksCompleted,nextOpenIndex} from './learning/task-sets.js';
 import {validateAnswer} from './core/answer-validator.js';
 import {inputTemplate,wireInput,collectAnswer} from './ui/inputs.js';
 import {renderAllMath} from './ui/math-renderer.js';
@@ -13,14 +12,15 @@ import {NumberLine} from './ui/number-line.js';
 import {CalculationLine} from './ui/calculation-line.js';
 import {renderStrategyHelp} from './ui/strategy-help.js';
 import {hasStrategy} from './didactics/strategy-registry.js';
-import {journeyNav,missionDashboardTemplate,missionCompleteTemplate,progressDots,quickBreakTemplate} from './ui/mission-dashboard.js';
+import {journeyNav,missionDashboardTemplate,missionCompleteTemplate,quickBreakTemplate} from './ui/mission-dashboard.js';
+import {taskSheetTemplate,taskNavigatorTemplate} from './ui/task-sheet.js';
 
 const root=document.querySelector('#app');
 const local=new LocalStorageAdapter(CONFIG.storageKey);
 const remote=new RemoteStorageAdapter(CONFIG.remoteStorageUrl);
 
 let session=hydrateSession(await local.load());
-let sequence=[];
+let tasks=[];
 let currentTask=null;
 let hintLevel=0;
 let numberLine=null;
@@ -34,10 +34,16 @@ let strategyHelpUsed=false;
 function hydrateSession(value){
   if(!value)return null;
   value.recentTaskSignatures??=[];
-  value.phaseSequence??=null;
   value.quickBreakSeen??=false;
   value.missions??={};
   value.activeMission??=null;
+  value.blockTasks??={diagnostic:null,final:null};
+  value.drafts??={};
+  if(value.blockTasks.diagnostic)value.blockTasks.diagnostic=reviveTaskList(value.blockTasks.diagnostic);
+  if(value.blockTasks.final)value.blockTasks.final=reviveTaskList(value.blockTasks.final);
+  for(const progress of Object.values(value.missions)){
+    if(progress?.tasks)progress.tasks=reviveTaskList(progress.tasks);
+  }
   return value;
 }
 
@@ -65,10 +71,18 @@ function resetTaskState(){
   strategyHelpUsed=false;
 }
 
-function rememberTask(task){
-  if(!task?.signature)return;
-  session.recentTaskSignatures.push(task.signature);
-  session.recentTaskSignatures=session.recentTaskSignatures.slice(-CONFIG.recentTaskMemory);
+function rememberTasks(list){
+  for(const task of list){
+    if(!task?.signature)continue;
+    session.recentTaskSignatures.push(task.signature);
+    session.recentTaskSignatures=session.recentTaskSignatures.slice(-CONFIG.recentTaskMemory);
+  }
+}
+
+function createTasks(skills){
+  const list=buildTaskList(skills,session.skills,session.recentTaskSignatures);
+  rememberTasks(list);
+  return list;
 }
 
 function showStart(){
@@ -78,9 +92,9 @@ function showStart(){
     <h1>Bruch-Check</h1>
     <p class="lead">Ein kurzer Schnellcheck zeigt, was schon sitzt. Danach trainierst du nur die Bereiche, die dir wirklich etwas bringen.</p>
     <div class="start-journey">
-      <div><strong>1</strong><span>Schnellcheck</span><small>10 kurze Aufgaben</small></div>
+      <div><strong>1</strong><span>Schnellcheck</span><small>${CONFIG.diagnosticLength} Aufgaben – vorher komplett sichtbar.</small></div>
       <div><strong>2</strong><span>Missionen</span><small>Du wählst, was du trainierst.</small></div>
-      <div><strong>3</strong><span>Final Check</span><small>Zeig, was jetzt sicher klappt.</small></div>
+      <div><strong>3</strong><span>Final Check</span><small>${CONFIG.finalLength} Aufgaben – ebenfalls mit Übersicht.</small></div>
     </div>
     ${saved?`
       <div class="feedback">Gespeicherter Stand für <strong>${escapeHtml(session.profile.name)}</strong> gefunden.</div>
@@ -90,13 +104,13 @@ function showStart(){
         <label class="field">Name oder Kürzel<input id="name" autocomplete="off"></label>
         <label class="field">Klasse<input id="class" value="3b" autocomplete="off"></label>
       </div>
-      <div class="actions"><button id="start">Schnellcheck starten</button></div>
+      <div class="actions"><button id="start">Schnellcheck ansehen</button></div>
     `}
   </section>`);
 
   if(saved){
     root.querySelector('#resume').onclick=resumeSession;
-    root.querySelector('#restart').onclick=async()=>{await local.clear();session=null;showStart()};
+    root.querySelector('#restart').onclick=async()=>{await local.clear();session=null;tasks=[];showStart()};
   }else{
     root.querySelector('#start').onclick=async()=>{
       const name=root.querySelector('#name').value.trim();
@@ -112,7 +126,7 @@ function resumeSession(){
   if(!session)return showStart();
   if(session.completed||session.phase==='results')return showResults();
   if(session.phase==='dashboard')return showDashboard();
-  if(session.phase==='mission'&&session.activeMission)return startMission(session.activeMission);
+  if(session.phase==='mission'&&session.activeMission)return startMission(session.activeMission,{resume:true});
   if(session.phase==='final')return beginFinal({resume:true});
   return beginDiagnostic({resume:true});
 }
@@ -120,60 +134,64 @@ function resumeSession(){
 function beginDiagnostic({resume=false}={}){
   session.phase='diagnostic';
   session.activeMission=null;
-  sequence=resume&&session.phaseSequence?.phase==='diagnostic'
-    ?[...session.phaseSequence.items]
-    :DIAGNOSTIC_SKILLS.slice(0,CONFIG.diagnosticLength);
-  if(!resume)session.taskIndex=0;
-  session.phaseSequence={phase:'diagnostic',items:[...sequence]};
+  if(!Array.isArray(session.blockTasks.diagnostic)||!session.blockTasks.diagnostic.length){
+    session.blockTasks.diagnostic=createTasks(DIAGNOSTIC_SKILLS.slice(0,CONFIG.diagnosticLength));
+  }
+  tasks=reviveTaskList(session.blockTasks.diagnostic);
+  if(!resume||session.taskIndex<0||session.taskIndex>=tasks.length)session.taskIndex=Math.max(0,nextOpenIndex(session,tasks,-1));
   resetTaskState();
   void save();
-  showTask();
+  showCurrentSheet();
 }
 
 function beginFinal({resume=false}={}){
   session.phase='final';
   session.activeMission=null;
-  sequence=resume&&session.phaseSequence?.phase==='final'
-    ?[...session.phaseSequence.items]
-    :FINAL_SKILLS.slice(0,CONFIG.finalLength);
-  if(!resume)session.taskIndex=0;
-  session.phaseSequence={phase:'final',items:[...sequence]};
+  if(!Array.isArray(session.blockTasks.final)||!session.blockTasks.final.length){
+    session.blockTasks.final=createTasks(FINAL_SKILLS.slice(0,CONFIG.finalLength));
+  }
+  tasks=reviveTaskList(session.blockTasks.final);
+  if(!resume||session.taskIndex<0||session.taskIndex>=tasks.length)session.taskIndex=Math.max(0,nextOpenIndex(session,tasks,-1));
   resetTaskState();
   void save();
-  showTask();
+  showCurrentSheet();
 }
 
 function ensureMissionProgress(id){
   const mission=getMission(id);if(!mission)return null;
-  session.missions[id]??={completed:false,index:0,sequence:null,runs:0,startedAt:null,completedAt:null};
+  session.missions[id]??={completed:false,index:0,sequence:null,tasks:null,runs:0,startedAt:null,completedAt:null};
   return session.missions[id];
 }
 
-function startMission(id,{restart=false}={}){
+function startMission(id,{restart=false,resume=false}={}){
   const mission=getMission(id);if(!mission)return showDashboard();
   const progress=ensureMissionProgress(id);
-  const needsNew=restart||!Array.isArray(progress.sequence)||progress.sequence.length===0||progress.index>=progress.sequence.length;
+  const needsNew=restart||!Array.isArray(progress.tasks)||!progress.tasks.length||progress.completed;
   if(needsNew){
     progress.sequence=buildMissionSequence(id,session.skills);
+    progress.tasks=createTasks(progress.sequence);
     progress.index=0;
     progress.completed=false;
     progress.startedAt=new Date().toISOString();
+    progress.completedAt=null;
+  }else{
+    progress.tasks=reviveTaskList(progress.tasks);
   }
   session.phase='mission';
   session.activeMission=id;
-  session.taskIndex=progress.index||0;
-  session.phaseSequence=null;
-  sequence=[...progress.sequence];
+  tasks=progress.tasks;
+  const preferred=Number.isInteger(progress.index)?progress.index:0;
+  session.taskIndex=preferred>=0&&preferred<tasks.length?preferred:Math.max(0,nextOpenIndex(session,tasks,-1));
   resetTaskState();
   void save();
-  showTask();
+  showCurrentSheet();
 }
 
 function showDashboard({justFinishedDiagnostic=false}={}){
   session.phase='dashboard';
   session.activeMission=null;
   session.taskIndex=0;
-  session.phaseSequence=null;
+  tasks=[];
   resetTaskState();
   void save();
   page(missionDashboardTemplate(session,{justFinishedDiagnostic}));
@@ -183,48 +201,90 @@ function showDashboard({justFinishedDiagnostic=false}={}){
   root.querySelector('#startFinal').onclick=()=>beginFinal();
 }
 
-function taskContext(){
-  if(session.phase==='diagnostic')return{stage:'diagnostic',eyebrow:'Schnellcheck',title:'Was sitzt schon?',label:`Frage ${session.taskIndex+1}`,mission:null};
-  if(session.phase==='final')return{stage:'final',eyebrow:'Final Check',title:'Gemischte Aufgaben',label:`Aufgabe ${session.taskIndex+1}`,mission:null};
+function sheetConfig(){
+  if(session.phase==='diagnostic')return{
+    title:'Schnellcheck',eyebrow:'Alle Aufgaben auf einen Blick',
+    description:'Du siehst jetzt alle Aufgaben, bevor du beginnst. Du kannst sie auch in einer anderen Reihenfolge bearbeiten.',
+    journey:journeyNav('diagnostic'),backLabel:''
+  };
+  if(session.phase==='final')return{
+    title:'Final Check',eyebrow:'Alle Aufgaben auf einen Blick',
+    description:'Acht gemischte Aufgaben. Schau sie dir zuerst in Ruhe an und beginne dort, wo du möchtest.',
+    journey:journeyNav('final'),backLabel:'Zu den Missionen'
+  };
   const mission=getMission(session.activeMission);
-  return{stage:'missions',eyebrow:'Mission',title:mission?.title||'Training',label:`Aufgabe ${session.taskIndex+1}`,mission};
-}
-
-function shouldShowQuickBreak(){
-  return session.phase==='diagnostic'&&!session.quickBreakSeen&&session.taskIndex===CONFIG.quickBreakAfter;
-}
-
-function showQuickBreak(){
-  page(quickBreakTemplate(session.taskIndex,sequence.length));
-  root.querySelector('#continueQuickCheck').onclick=()=>{
-    session.quickBreakSeen=true;
-    void save();
-    showTask({skipQuickBreak:true});
+  return{
+    title:`Mission ${mission?.code||''} · ${mission?.callSign||mission?.title||'Training'}`,
+    eyebrow:mission?.title||'Mission',
+    description:`${mission?.subtitle||''} Alle Aufgaben dieser Mission sind von Anfang an sichtbar. Du kannst schwierige Aufgaben zunächst auslassen und später zurückkommen.`,
+    journey:journeyNav('missions'),backLabel:'Zu den Missionen'
   };
 }
 
-function showTask({reuse=false,skipQuickBreak=false}={}){
-  if(session.taskIndex>=sequence.length)return finishCurrentBlock();
-  if(!skipQuickBreak&&shouldShowQuickBreak())return showQuickBreak();
-
-  if(!reuse){
-    hintLevel=0;
-    strategyOpened=false;
-    strategyHelpUsed=false;
-    calculationLine=null;
-    numberLine=null;
-    orderItems=[];
+function showCurrentSheet(){
+  if(!tasks.length){
+    if(session.phase==='mission')return showDashboard();
+    return showStart();
   }
+  if(allTasksCompleted(session,tasks))return finishCurrentBlock();
+  const cfg=sheetConfig();
+  page(taskSheetTemplate({session,tasks,...cfg,currentIndex:session.taskIndex}));
+  root.querySelectorAll('[data-task-index]').forEach(button=>button.onclick=()=>jumpToTask(Number(button.dataset.taskIndex)));
+  root.querySelector('#sheetContinue')?.addEventListener('click',()=>{
+    const currentOpen=!session.answers.some(answer=>answer.taskId===tasks[session.taskIndex]?.id&&answer.correct);
+    const index=currentOpen?session.taskIndex:nextOpenIndex(session,tasks,session.taskIndex);
+    if(index>=0)jumpToTask(index);else finishCurrentBlock();
+  });
+  root.querySelector('#sheetBack')?.addEventListener('click',()=>showDashboard());
+}
 
-  const skill=sequence[session.taskIndex];
-  if(!reuse||!currentTask||currentTask.skill!==skill){
-    const skillState=session.skills[skill]||{difficulty:1,errors:0,correctNoHelp:0};
-    currentTask=generateTask(skill,adaptDifficulty(skillState),{avoidSignatures:session.recentTaskSignatures});
-    rememberTask(currentTask);
-    draftAnswer=null;
+function taskContext(){
+  if(session.phase==='diagnostic')return{stage:'diagnostic',eyebrow:'Schnellcheck',title:'Was sitzt schon?',label:`Aufgabe ${session.taskIndex+1}`,mission:null};
+  if(session.phase==='final')return{stage:'final',eyebrow:'Final Check',title:'Gemischte Aufgaben',label:`Aufgabe ${session.taskIndex+1}`,mission:null};
+  const mission=getMission(session.activeMission);
+  return{stage:'missions',eyebrow:`Mission ${mission?.code||''} · ${mission?.callSign||''}`,title:mission?.title||'Training',label:`Aufgabe ${session.taskIndex+1}`,mission};
+}
+
+function jumpToTask(index){
+  if(index<0||index>=tasks.length)return;
+  if(currentTask)stashDraft();
+  session.taskIndex=index;
+  if(session.phase==='mission'&&session.activeMission){
+    const progress=ensureMissionProgress(session.activeMission);
+    progress.index=index;
+  }
+  resetTaskState();
+  void save();
+  showTask();
+}
+
+function showQuickBreak(){
+  page(quickBreakTemplate(completedCount(session,tasks),tasks.length));
+  root.querySelector('#continueQuickCheck').onclick=()=>{
+    session.quickBreakSeen=true;
+    const next=nextOpenIndex(session,tasks,session.taskIndex);
+    if(next>=0)session.taskIndex=next;
+    resetTaskState();
     void save();
-  }
+    showTask();
+  };
+}
 
+function showTask(){
+  if(!tasks.length)return showCurrentSheet();
+  if(session.taskIndex<0||session.taskIndex>=tasks.length)session.taskIndex=Math.max(0,nextOpenIndex(session,tasks,-1));
+  currentTask=tasks[session.taskIndex];
+  if(!currentTask)return finishCurrentBlock();
+
+  hintLevel=0;
+  strategyOpened=false;
+  strategyHelpUsed=false;
+  calculationLine=null;
+  numberLine=null;
+  orderItems=[];
+  draftAnswer=session.drafts?.[currentTask.id]||null;
+
+  const skill=currentTask.skill;
   supportMode=chooseSupportMode({phase:session.phase,skillState:session.skills[skill],task:currentTask});
   const usesCalcLine=Boolean(currentTask.solutionPlan&&supportMode!=='free');
   const strategyAvailable=session.phase==='mission'&&hasStrategy(skill);
@@ -232,20 +292,21 @@ function showTask({reuse=false,skipQuickBreak=false}={}){
   const supportBadge=session.phase==='mission'&&currentTask.solutionPlan
     ?`<span class="support-badge">${escapeHtml(supportLabel(supportMode))}</span>`:'';
   const missionCode=context.mission?`<span class="mission-mini-code">${context.mission.code}</span>`:'';
-  const dashboardButton=session.phase==='mission'?'<button id="toDashboard" class="text-button" type="button">Missionen</button>':'';
+  const dashboardButton=['mission','final'].includes(session.phase)?'<button id="toDashboard" class="text-button" type="button">Missionen</button>':'';
   const promptMath=!usesCalcLine&&currentTask.promptTex
     ?`<div class="math question-math" data-tex="${escapeHtml(currentTask.promptTex)}"></div>`:'';
+  const navLabel=session.phase==='mission'?(context.mission?.callSign||'Mission'):session.phase==='diagnostic'?'Schnellcheck':'Final Check';
 
   page(`<section class="card task-card">
     ${journeyNav(context.stage)}
     <div class="task-toolbar">
       <div>
-        <span class="eyebrow">${context.eyebrow}</span>
+        <span class="eyebrow">${escapeHtml(context.eyebrow)}</span>
         <div class="task-mission-title">${missionCode}<strong>${escapeHtml(context.title)}</strong></div>
       </div>
       <div class="toolbar-actions">${supportBadge}${dashboardButton}</div>
     </div>
-    <div class="task-context-row">${progressDots(session.taskIndex,sequence.length)}<span class="task-context-label">${context.label}</span></div>
+    ${taskNavigatorTemplate({session,tasks,currentIndex:session.taskIndex,label:`${navLabel} · ${tasks.length} Aufgaben`})}
     <div class="question"><p>${escapeHtml(currentTask.promptText||'')}</p>${promptMath}</div>
     <div id="interaction" class="interaction"></div>
     <div id="strategyHelp"></div>
@@ -265,7 +326,7 @@ function showTask({reuse=false,skipQuickBreak=false}={}){
     interaction.innerHTML='<p class="interaction-note">Klicke auf die passende Stelle oder bewege die Markierung mit den Pfeiltasten.</p><div id="numberline"></div>';
     numberLine=new NumberLine(interaction.querySelector('#numberline'),currentTask.numberLine);
   }else if(currentTask.type==='order'){
-    if(!reuse||!orderItems.length)orderItems=currentTask.items.map(x=>x);
+    orderItems=currentTask.items.map(item=>item);
     interaction.innerHTML='<p class="interaction-note">Verschiebe die Brüche mit den Pfeilen, bis die Reihenfolge stimmt.</p><div id="orderMount"></div>';
     renderOrder(interaction.querySelector('#orderMount'));
   }else{
@@ -277,16 +338,10 @@ function showTask({reuse=false,skipQuickBreak=false}={}){
   root.querySelector('#check').onclick=checkCurrent;
   root.querySelector('#hintBtn').onclick=showHint;
   root.querySelector('#strategyBtn')?.addEventListener('click',toggleStrategyHelp);
-  root.querySelector('#toDashboard')?.addEventListener('click',()=>{stashDraft();returnToDashboard()});
+  root.querySelector('#openTaskSheet')?.addEventListener('click',()=>{stashDraft();showCurrentSheet()});
+  root.querySelectorAll('[data-task-jump]').forEach(button=>button.onclick=()=>jumpToTask(Number(button.dataset.taskJump)));
+  root.querySelector('#toDashboard')?.addEventListener('click',()=>{stashDraft();showDashboard()});
   renderAllMath(root);
-}
-
-function returnToDashboard(){
-  if(session.phase==='mission'&&session.activeMission){
-    const progress=ensureMissionProgress(session.activeMission);
-    progress.index=session.taskIndex;
-  }
-  showDashboard();
 }
 
 function toggleStrategyHelp(){
@@ -320,7 +375,14 @@ function stashDraft(){
     else if(currentTask.type==='numberLine')draftAnswer={value:numberLine?.getAnswer()};
     else if(currentTask.type==='order')draftAnswer={order:[...orderItems]};
     else draftAnswer=collectAnswer(root.querySelector('#interaction'),currentTask);
+    session.drafts[currentTask.id]=draftAnswer;
+    void save();
   }catch{draftAnswer=null}
+}
+
+function clearDraft(){
+  if(currentTask?.id&&session.drafts)delete session.drafts[currentTask.id];
+  draftAnswer=null;
 }
 
 function restoreDraft(){
@@ -415,7 +477,7 @@ function checkCurrent(){
       return;
     }
     if(!stepResult.correct){
-      recordWrong({message:stepResult.message}, {kind:'calculation-step',step:stepBefore?.id||null,value:rawStep});
+      recordWrong({message:stepResult.message},{kind:'calculation-step',step:stepBefore?.id||null,value:rawStep});
       setFeedback({status:'error',message:stepResult.message});
       button.disabled=false;
       return;
@@ -427,6 +489,7 @@ function checkCurrent(){
     }
     const result={status:'correct',correct:true,message:'Der Rechenweg stimmt.'};
     recordAttempt(session,currentTask,result,hintLevel,calculationLine.getRawAnswer());
+    clearDraft();
     void save();
     showCorrectResult(result);
     return;
@@ -456,6 +519,7 @@ function checkCurrent(){
   }
 
   recordAttempt(session,currentTask,result,hintLevel,raw);
+  if(result.correct)clearDraft();
   void save();
 
   if(result.correct)showCorrectResult(result);
@@ -468,18 +532,21 @@ function checkCurrent(){
 function showCorrectResult(result){
   const reinforcement=hintLevel===0
     ?'<span class="feedback-detail">Selbstständig gelöst.</span>'
-    :'<span class="feedback-detail">Mit Unterstützung gelöst. Eine ähnliche Aufgabe kann später wiederkommen.</span>';
+    :'<span class="feedback-detail">Mit Unterstützung gelöst.</span>';
   setFeedback(result,reinforcement);
-  root.querySelector('#feedback').innerHTML+=`<div class="actions"><button id="next">Weiter</button></div>`;
+  const finished=allTasksCompleted(session,tasks);
+  root.querySelector('#feedback').innerHTML+=`<div class="actions"><button id="next">${finished?'Abschnitt abschließen':'Nächste offene Aufgabe'}</button><button id="afterCorrectSheet" class="secondary">Aufgabenübersicht</button></div>`;
   root.querySelector('#next').onclick=advanceTask;
+  root.querySelector('#afterCorrectSheet').onclick=showCurrentSheet;
 }
 
 function advanceTask(){
-  session.taskIndex++;
-  if(session.phase==='mission'&&session.activeMission){
-    const progress=ensureMissionProgress(session.activeMission);
-    progress.index=session.taskIndex;
-  }
+  if(allTasksCompleted(session,tasks))return finishCurrentBlock();
+  if(session.phase==='diagnostic'&&!session.quickBreakSeen&&completedCount(session,tasks)===CONFIG.quickBreakAfter)return showQuickBreak();
+  const next=nextOpenIndex(session,tasks,session.taskIndex);
+  if(next<0)return finishCurrentBlock();
+  session.taskIndex=next;
+  if(session.phase==='mission'&&session.activeMission)ensureMissionProgress(session.activeMission).index=next;
   resetTaskState();
   void save();
   showTask();
@@ -498,7 +565,6 @@ function missionRunStats(id,startedAt){
 async function finishCurrentBlock(){
   if(session.phase==='diagnostic'){
     session.diagnosticScore=scorePhase(session,'diagnostic');
-    session.phaseSequence=null;
     session.taskIndex=0;
     await save();
     showDashboard({justFinishedDiagnostic:true});
@@ -507,7 +573,7 @@ async function finishCurrentBlock(){
   if(session.phase==='mission'){
     const id=session.activeMission,mission=getMission(id),progress=ensureMissionProgress(id);
     progress.completed=true;
-    progress.index=sequence.length;
+    progress.index=tasks.length;
     progress.completedAt=new Date().toISOString();
     progress.runs=(progress.runs||0)+1;
     const stats=missionRunStats(id,progress.startedAt);
@@ -524,7 +590,6 @@ async function finishCurrentBlock(){
     session.finalScore=scorePhase(session,'final');
     session.completed=true;
     session.phase='results';
-    session.phaseSequence=null;
     await save();
     await remote.save(exportSession(session)).catch(()=>null);
     showResults();
@@ -566,7 +631,7 @@ function showResults(){
     a.click();
     URL.revokeObjectURL(a.href);
   };
-  root.querySelector('#new').onclick=async()=>{await local.clear();session=null;sequence=[];resetTaskState();showStart()};
+  root.querySelector('#new').onclick=async()=>{await local.clear();session=null;tasks=[];resetTaskState();showStart()};
 }
 
 showStart();
